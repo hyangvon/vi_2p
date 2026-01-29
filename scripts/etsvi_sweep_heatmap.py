@@ -48,10 +48,10 @@ def _init_fig(figsize=None):
     plt.figure(figsize=figsize)
 
 def _find_workspace_root():
-    # Find ancestor directory that contains src/vi; fallback to cwd
+    # Find ancestor directory that contains src/vi_2p; fallback to cwd
     p = os.getcwd()
     while True:
-        if os.path.isdir(os.path.join(p, 'src', 'vi')):
+        if os.path.isdir(os.path.join(p, 'src', 'vi_2p')):
             return p
         parent = os.path.dirname(p)
         if parent == p:
@@ -60,11 +60,11 @@ def _find_workspace_root():
     return os.getcwd()
 
 WORKSPACE_ROOT = _find_workspace_root()
-CONFIG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'config')
+CONFIG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'config')
 BASE_CONFIG = os.path.join(CONFIG_DIR, 'vi_params.yaml')
-CSV_BASE = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'csv')
-OUT_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'fig', 'heatmaps')
-LOG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'logs', 'etsvi_sweep')
+CSV_BASE = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'csv')
+OUT_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'fig', 'heatmaps')
+LOG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'logs', 'etsvi_sweep')
 os.makedirs(OUT_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -122,7 +122,7 @@ def write_params(out_path, base_cfg, q_init, dt, T, alpha, beta):
 
 
 def run_etsvi(params_file, timeout=600):
-    cmd = ['ros2', 'run', 'vi', 'etsvi_node', '--ros-args', '--params-file', params_file]
+    cmd = ['ros2', 'run', 'vi_2p', 'etsvi_node', '--ros-args', '--params-file', params_file]
     try:
         p = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout)
         return 0, p.stdout

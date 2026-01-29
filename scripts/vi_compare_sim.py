@@ -41,11 +41,11 @@ def _init_fig(figsize=None):
 def _save_fig(tag, filename, dpi, show=True):
     # 保存到按参数命名的子文件夹下，按 experiment params / tag 分类
     params_label = build_params_label()
-    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi/fig/{params_label}/{tag}")
+    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi_2p/fig/{params_label}/{tag}")
     os.makedirs(save_dir, exist_ok=True)
 
     # 尝试从配置文件读取运行参数并加入文件名
-    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
     q_init = 'NA'
     timestep = 'NA'
     duration = 'NA'
@@ -81,17 +81,24 @@ def _save_fig(tag, filename, dpi, show=True):
         pass
 
     def _format_param(v):
-        # If numeric-like and represents an integer (e.g. 10.0) emit integer string '10'
-        try:
-            fv = float(v)
-            if fv.is_integer():
-                return str(int(fv))
-            # otherwise use decimal with 'p' as separator to match filename convention
-            s = str(v)
-            return s.replace('.', 'p').replace(' ', '')
-        except Exception:
-            s = str(v)
-            return s.replace('.', 'p').replace(' ', '')
+        def _fmt_single(x):
+            try:
+                fx = float(x)
+                s = f"{fx:.2f}"
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+                    if '.' in s:
+                        s = s.replace('.', 'p')
+                return s.replace(' ', '')
+            except Exception:
+                s = str(x)
+                s = s.replace('.', 'p').replace(' ', '')
+                return s
+
+        if isinstance(v, (list, tuple)):
+            parts = [_fmt_single(x) for x in v]
+            return "_".join(parts)
+        return _fmt_single(v)
 
     params_str = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}_a{_format_param(lyap_alpha)}_b{_format_param(lyap_beta)}"
     name, ext = os.path.splitext(filename)
@@ -107,7 +114,7 @@ def _save_fig(tag, filename, dpi, show=True):
 
 
 def build_params_label(include_lyap=True):
-    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
     q_init = 'NA'
     timestep = 'NA'
     duration = 'NA'
@@ -142,13 +149,24 @@ def build_params_label(include_lyap=True):
         pass
 
     def _format_param(v):
-        try:
-            fv = float(v)
-            if fv.is_integer():
-                return str(int(fv))
-            return str(v).replace('.', 'p').replace(' ', '')
-        except Exception:
-            return str(v).replace('.', 'p').replace(' ', '')
+        def _fmt_single(x):
+            try:
+                fx = float(x)
+                s = f"{fx:.2f}"
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+                    if '.' in s:
+                        s = s.replace('.', 'p')
+                return s.replace(' ', '')
+            except Exception:
+                s = str(x)
+                s = s.replace('.', 'p').replace(' ', '')
+                return s
+
+        if isinstance(v, (list, tuple)):
+            parts = [_fmt_single(x) for x in v]
+            return "_".join(parts)
+        return _fmt_single(v)
 
     label = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}"
     if include_lyap:
@@ -161,13 +179,13 @@ def build_params_label(include_lyap=True):
 
 def run_ctsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting ctsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'ctsvi_ad_node',
+            'ros2', 'run', 'vi_2p', 'ctsvi_ad_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -181,13 +199,13 @@ def run_ctsvi():
 
 def run_atsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting atsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'atsvi_ad_node',
+            'ros2', 'run', 'vi_2p', 'atsvi_ad_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -201,13 +219,13 @@ def run_atsvi():
 
 def run_etsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting etsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'etsvi_node',
+            'ros2', 'run', 'vi_2p', 'etsvi_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -221,13 +239,13 @@ def run_etsvi():
 
 # def run_etsvi_op():
 #     """运行 C++ 仿真节点"""
-#     config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+#     config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 #
 #     print("Starting etsvi_op simulation...")
 #
 #     try:
 #         result = subprocess.run([
-#             'ros2', 'run', 'vi', 'etsvi_op_node',
+#             'ros2', 'run', 'vi_2p', 'etsvi_op_node',
 #             '--ros-args', '--params-file', config_file
 #         ], check=True)
 #
@@ -242,7 +260,7 @@ def run_etsvi():
 def plot_runtime_comparison(tag, dpi_set):
     """绘制三种算法的平均运行时间对比图"""
     print("Generating runtime comparison plot...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label()
 
     # 定义算法和对应的文件路径
@@ -313,7 +331,7 @@ def plot_runtime_vs_energy(tag, dpi_set, csv_paths=None, font_sizes=None):
     tick_fs = font_sizes.get('tick', 15)
     legend_fs = font_sizes.get('legend', 16)
     text_fs = font_sizes.get('text', 15)
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
 
     params_base = [
         'q0p2_dt0p01_T40_a0p4_b0p04', 
@@ -550,7 +568,7 @@ def plot_runtime_vs_energy(tag, dpi_set, csv_paths=None, font_sizes=None):
     filename = f"runtime_vs_energy_{tag}.png"
     # _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
 
-    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi/fig/vs")
+    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi_2p/fig/vs")
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, filename)
     plt.tight_layout()
@@ -560,9 +578,9 @@ def plot_runtime_vs_energy(tag, dpi_set, csv_paths=None, font_sizes=None):
 
 def compute_and_save_energy_errors(tag):
     """计算 CTSVI/ATSVI/ETSVI 的能量误差平均值并保存为 CSV，同时打印到终端。
-    输出保存到: src/vi/csv/<tag>/energy_error_summary_<tag>.csv
+        输出保存到: src/vi_2p/csv/<tag>/energy_error_summary_<tag>.csv
     """
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label()
     methods = {
         'CTSVI_AD': os.path.join(base, params_base, 'ctsvi_ad', 'delta_energy_history.csv'),
@@ -614,7 +632,7 @@ def plot_momentum(tag, dpi_set):
     如果文件存在则读取并绘制每个分量随时间的变化。
     """
     print("Generating momentum plot...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label(include_lyap=True)
 
     csv_dirs = {
@@ -683,13 +701,13 @@ def plot_momentum(tag, dpi_set):
     return True
 
 
-def plot_etsvi_joint7(tag, dpi_set, joint_idx=7):
+def plot_etsvi_joint(tag, dpi_set, joint_idx=2):
     """
     仅绘制 ETSVI 的指定关节（1-based 索引）的通用动量随时间变化。
     默认绘制关节7（joint_idx=7）。
     """
     print(f"Generating ETSVI joint {joint_idx} momentum plot...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label(include_lyap=True)
     csv_dir = os.path.join(base, params_base, 'etsvi')
 
@@ -714,17 +732,98 @@ def plot_etsvi_joint7(tag, dpi_set, joint_idx=7):
         t = np.arange(mom.shape[0])
 
     idx0 = joint_idx - 1
-    if idx0 < 0 or idx0 >= mom.shape[1]:
-        print(f"Requested joint index {joint_idx} out of range (available columns={mom.shape[1]})")
+    idx0 = joint_idx - 1
+    # If at least two columns available, plot joint1, joint2 and total momentum
+    n_cols = mom.shape[1]
+    _init_fig(figsize=(6,4))
+    if n_cols >= 2:
+        p1 = mom[:, 0]
+        p2 = mom[:, 1]
+        p_total = np.sum(mom, axis=1)
+        plt.plot(t, p1, label='joint 1', color='C0', linewidth=1.5)
+        plt.plot(t, p2, label='joint 2', color='C1', linewidth=1.5)
+        plt.plot(t, p_total, label='total', color='C2', linewidth=2)
+        plt.xlabel('Time [s]')
+        plt.ylabel('Angular momentum')
+        plt.title('ETSVI Joint 1 & 2 and Total Momentum')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        filename = f"momentum_etsvi_joints12_{tag}.png"
+        _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+        return True
+    else:
+        # fallback to original single-joint plot
+        if idx0 < 0 or idx0 >= n_cols:
+            print(f"Requested joint index {joint_idx} out of range (available columns={n_cols})")
+            return None
+        plt.plot(t, mom[:, idx0], color='C2', linewidth=2)
+        plt.xlabel('Time [s]')
+        plt.ylabel(f'Momentum (joint {joint_idx})')
+        plt.title(f'ETSVI Joint {joint_idx} Momentum')
+        plt.grid(True, alpha=0.3)
+        filename = f"momentum_etsvi_joint{joint_idx}_{tag}.png"
+        _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+        return True
+
+
+def plot_etsvi_phase(tag, dpi_set, joint_idx=2):
+    """
+    绘制 ETSVI 指定关节的相图：q (角度) vs qdot (角速度)。
+    joint_idx 为 1-based 索引，默认第 2 关节。
+    """
+    print(f"Generating ETSVI phase portrait for joint {joint_idx}...")
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
+    params_base = build_params_label(include_lyap=True)
+    csv_dir = os.path.join(base, params_base, 'etsvi')
+
+    q_path = os.path.join(csv_dir, 'q_history.csv')
+    time_path = os.path.join(csv_dir, 'time_history.csv')
+
+    if not os.path.exists(q_path):
+        print(f"No ETSVI q_history found at {q_path}; skipping phase plot.")
         return None
 
-    _init_fig(figsize=(6,4))
-    plt.plot(t, mom[:, idx0], color='C2', linewidth=2)
-    plt.xlabel('Time [s]')
-    plt.ylabel(f'Momentum (joint {joint_idx})')
-    plt.title(f'ETSVI Joint {joint_idx} Momentum')
+    try:
+        q_hist = np.loadtxt(q_path, delimiter=',')
+        q_hist = np.atleast_2d(q_hist).astype(float)
+    except Exception as e:
+        print(f"Failed to read {q_path}: {e}")
+        return None
+
+    try:
+        t = np.loadtxt(time_path, delimiter=',')
+        t = np.atleast_1d(t).astype(float)
+    except Exception:
+        t = np.arange(q_hist.shape[0])
+
+    idx0 = joint_idx - 1
+    if idx0 < 0 or idx0 >= q_hist.shape[1]:
+        print(f"Requested joint index {joint_idx} out of range (available columns={q_hist.shape[1]})")
+        return None
+
+    # 使用 np.gradient 保留与 q_hist 相同长度
+    try:
+        qdot = np.gradient(q_hist[:, idx0], t)
+    except Exception:
+        # fallback numerical diff
+        dt = t[1] - t[0] if t.size > 1 else 1.0
+        qdot = np.zeros(q_hist.shape[0])
+        qdot[1:] = np.diff(q_hist[:, idx0]) / dt
+
+    _init_fig(figsize=(6, 6))
+    plt.plot(q_hist[:, idx0], qdot, color='#D62728', linewidth=1.5)
+    plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
+    plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
+    plt.xlabel(f'Joint {joint_idx} q [rad]')
+    plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
+    plt.title(f'C-ATSVI Phase Portrait')
     plt.grid(True, alpha=0.3)
-    filename = f"momentum_etsvi_joint{joint_idx}_{tag}.png"
+    plt.xlim(-3, 3)
+    plt.ylim(-15, 15)
+    handles, leg_labels = plt.gca().get_legend_handles_labels()
+    if leg_labels:
+        plt.legend()
+    filename = f"phase_etsvi_joint{joint_idx}_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
     return True
 
@@ -796,7 +895,7 @@ def plot_results(tag, dpi_set):
     print("Generating plots...")
 
     # ---------- 1. 读取数据 ----------
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label(include_lyap=True)
 
     csv_dir_ctsvi_ad = os.path.join(base, params_base, 'ctsvi_ad')
@@ -869,13 +968,13 @@ def plot_results(tag, dpi_set):
 
 
     # CTSVI
-    plt.plot(time_ctsvi, delta_energy_ctsvi, label='ΔEnergy of CTSVI', color=c_ctsvi, linestyle='-', linewidth=2)
+    plt.plot(time_ctsvi, delta_energy_ctsvi, label='ΔEnergy of CTSVI', color='#9467BD', linestyle=':', linewidth=1.5)
 
     # ATSVI
-    plt.plot(time_atsvi, delta_energy_atsvi, label='ΔEnergy of ATSVI', color=c_atsvi, linestyle='-.', linewidth=2)
+    plt.plot(time_atsvi, delta_energy_atsvi, label='ΔEnergy of ATSVI', color='#000000', linestyle='-', linewidth=1.2)
 
     # ETSVI
-    plt.plot(time_etsvi, delta_energy_etsvi, label='ΔEnergy of C-ATSVI', color=c_etsvi, linestyle='--', linewidth=2)
+    plt.plot(time_etsvi, delta_energy_etsvi, label='ΔEnergy of C-ATSVI', color='#D62728', linestyle='-', linewidth=2)
 
     plt.xlabel('Time [s]')
     plt.ylabel('Energy [J]')
@@ -935,7 +1034,7 @@ def plot_results(tag, dpi_set):
     plt.title('Tip Position')
     plt.legend(loc='upper left')
     plt.grid(True)
-    plt.ylim(-8, -3)
+    # plt.ylim(-8, -3)
     filename = f"tcp_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
 
@@ -972,9 +1071,11 @@ def plot_results(tag, dpi_set):
 
     # 仅绘制 ETSVI 的关节7 动量（按用户要求）
     try:
-        plot_etsvi_joint7(tag, dpi_set, joint_idx=7)
+        plot_etsvi_joint(tag, dpi_set, joint_idx=2)
+        # 绘制第2关节的 q vs qdot 相图
+        plot_etsvi_phase(tag, dpi_set, joint_idx=2)
     except Exception as e:
-        print(f"Warning: failed to plot ETSVI joint7 momentum: {e}")
+        print(f"Warning: failed to plot ETSVI joint momentum: {e}")
 
     # print("Plotting completed. Close all plot windows to exit.")
 
@@ -982,7 +1083,7 @@ def plot_results(tag, dpi_set):
     # plt.ioff()  # 关闭交互模式
     # plt.show()  # 阻塞直到所有窗口关闭
 
-    plot_7dof_pendulum()
+    # plot_7dof_pendulum()
 
     return 1
 

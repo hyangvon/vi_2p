@@ -76,7 +76,7 @@
   </link>
 
   <!-- 4. 末端质量块 -->
-  <link name="end_effector">
+  <link name="link_tcp">
     <visual>
       <geometry>
         <sphere radius="0.04"/>
@@ -114,7 +114,7 @@
 
   <joint name="second_to_end" type="fixed">
     <parent link="second_link"/>
-    <child link="end_effector"/>
+    <child link="link_tcp"/>
     <origin xyz="0 0 -0.8" rpy="0 0 0"/>
   </joint>
 

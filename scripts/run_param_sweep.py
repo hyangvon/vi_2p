@@ -12,9 +12,9 @@ Variables:
 - beta: 0.01,0.02,...,0.08
 
 For each (alpha,beta) this script will:
- - create a params YAML under src/vi/config/ with the modified values
+ - create a params YAML under src/vi_2p/config/ with the modified values
  - run ctsvi_ad_node, atsvi_ad_node, etsvi_node sequentially with that params file
- - save per-experiment logs under src/vi/logs/
+ - save per-experiment logs under src/vi_2p/logs/
 
 Usage:
   python3 run_param_sweep.py [--dry-run] [--nodes ctsvi,atsvi,etsvi]
@@ -32,10 +32,10 @@ except Exception:
 
 
 def _find_workspace_root():
-    # Find ancestor directory that contains src/vi; fallback to cwd
+    # Find ancestor directory that contains src/vi_2p; fallback to cwd
     p = os.getcwd()
     while True:
-        if os.path.isdir(os.path.join(p, 'src', 'vi')):
+        if os.path.isdir(os.path.join(p, 'src', 'vi_2p')):
             return p
         parent = os.path.dirname(p)
         if parent == p:
@@ -44,9 +44,9 @@ def _find_workspace_root():
     return os.getcwd()
 
 WORKSPACE_ROOT = _find_workspace_root()
-CONFIG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'config')
+CONFIG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'config')
 BASE_CONFIG = os.path.join(CONFIG_DIR, 'vi_params.yaml')
-LOG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi', 'logs', 'param_sweep')
+LOG_DIR = os.path.join(WORKSPACE_ROOT, 'src', 'vi_2p', 'logs', 'param_sweep')
 os.makedirs(LOG_DIR, exist_ok=True)
 
 
@@ -111,7 +111,7 @@ def write_params_file(out_path, base_cfg, q_init, dt, T, alpha, beta):
 
 
 def run_node(node_name, params_file, timeout=None):
-    cmd = ['ros2', 'run', 'vi', node_name, '--ros-args', '--params-file', params_file]
+    cmd = ['ros2', 'run', 'vi_2p', node_name, '--ros-args', '--params-file', params_file]
     start = datetime.datetime.now()
     try:
         p = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout)

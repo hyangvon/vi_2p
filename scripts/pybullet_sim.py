@@ -19,7 +19,7 @@ def expand_user(path):
 
 
 def main():
-    cfg_path = expand_user('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    cfg_path = expand_user('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
     with open(cfg_path, 'r') as f:
         cfg = yaml.safe_load(f)
 
@@ -27,9 +27,22 @@ def main():
     params = cfg.get('/**', {}).get('ros__parameters', {})
     # fallback to top-level keys if not found
     q_init = params.get('q_init', 0.2)
+    # allow q_init to be scalar or per-joint list; coerce to floats
+    q_init_list = None
+    try:
+        if isinstance(q_init, (list, tuple)):
+            q_init_list = [float(x) for x in q_init]
+        else:
+            q_init = float(q_init)
+    except Exception:
+        # leave as-is; downstream code will handle
+        try:
+            q_init = float(q_init)
+        except Exception:
+            pass
     timestep = params.get('timestep', 0.01)
     duration = params.get('duration', 10.0)
-    urdf_path = expand_user(params.get('urdf_path', '~/ros2_ws/dynamic_ws/src/vi/urdf/7_pendulum.urdf'))
+    urdf_path = expand_user(params.get('urdf_path', '~/ros2_ws/dynamic_ws/src/vi_2p/urdf/7_pendulum.urdf'))
 
     n_steps = int(duration / timestep)
 
@@ -72,7 +85,13 @@ def main():
 
     # initialize joints
     for i in range(num_joints):
-        p.resetJointState(body, i, targetValue=q_init, targetVelocity=0.0, physicsClientId=client)
+        init_val = q_init_list[i] if q_init_list is not None and i < len(q_init_list) else q_init
+        try:
+            init_val = float(init_val)
+        except Exception:
+            print(f"Warning: q_init for joint {i} is not a float: {init_val} (type={type(init_val)}). Using 0.0")
+            init_val = 0.0
+        p.resetJointState(body, i, targetValue=init_val, targetVelocity=0.0, physicsClientId=client)
         p.setJointMotorControl2(body, i, p.VELOCITY_CONTROL, force=0)
 
     q_history = []
@@ -80,6 +99,7 @@ def main():
     energy_history = []
     delta_energy_history = []
     ee_history = []
+    qdot_history = []
     momentum_history = []
 
     def compute_ke(qdot_arr, M):
@@ -107,12 +127,14 @@ def main():
         return 0.5 * qdot_arr @ M_sub @ qdot_arr
 
     # initial energy
-    q = [p.getJointState(body, i, physicsClientId=client)[0] for i in range(num_joints)]
-    qdot = [p.getJointState(body, i, physicsClientId=client)[1] for i in range(num_joints)]
+    q = [float(p.getJointState(body, i, physicsClientId=client)[0]) for i in range(num_joints)]
+    qdot = [float(p.getJointState(body, i, physicsClientId=client)[1]) for i in range(num_joints)]
 
     try:
-        M = np.array(p.calculateMassMatrix(body, q, physicsClientId=client))
-    except Exception:
+        q_call = [float(x) for x in q]
+        M = np.array(p.calculateMassMatrix(body, q_call, physicsClientId=client))
+    except Exception as e:
+        print(f"Warning: calculateMassMatrix failed for q={q} (types={[type(x) for x in q]}): {e}")
         M = np.eye(num_joints)
 
     qdot_arr = np.array(qdot)
@@ -146,8 +168,8 @@ def main():
         pin_elapsed = 0.0
         if pin_model is not None and pin_data is not None:
             try:
-                q_pin = np.array([p.getJointState(body, i, physicsClientId=client)[0] for i in range(num_joints)])
-                v_pin = np.array([p.getJointState(body, i, physicsClientId=client)[1] for i in range(num_joints)])
+                q_pin = np.array([float(p.getJointState(body, i, physicsClientId=client)[0]) for i in range(num_joints)], dtype=float)
+                v_pin = np.array([float(p.getJointState(body, i, physicsClientId=client)[1]) for i in range(num_joints)], dtype=float)
                 tpin0 = time.perf_counter()
                 # CRBA
                 pin.crba(pin_model, pin_data, q_pin)
@@ -158,6 +180,7 @@ def main():
                 except Exception as e:
                     # aba may fail for some models; record error and continue
                     pin_error_count += 1
+                    print(f"Warning: pin.aba failed: {e}; q_pin={q_pin}, v_pin={v_pin}")
                 pin_elapsed = time.perf_counter() - tpin0
                 pin_runtimes.append(pin_elapsed)
             except Exception as e:
@@ -166,14 +189,15 @@ def main():
 
         runtimes.append(elapsed + pin_elapsed)
 
-        q = [p.getJointState(body, i, physicsClientId=client)[0] for i in range(num_joints)]
-        qdot = [p.getJointState(body, i, physicsClientId=client)[1] for i in range(num_joints)]
+        q = [float(p.getJointState(body, i, physicsClientId=client)[0]) for i in range(num_joints)]
+        qdot = [float(p.getJointState(body, i, physicsClientId=client)[1]) for i in range(num_joints)]
 
         # Prefer Pinocchio inertia when available for momentum computation and KE
         qdot_arr = np.array(qdot)
         if pin_model is not None and pin_data is not None:
             try:
-                pin.crba(pin_model, pin_data, np.array(q))
+                q_pin_arr = np.array(q, dtype=float)
+                pin.crba(pin_model, pin_data, q_pin_arr)
                 M_pin = np.array(pin_data.M)
                 # extract top-left submatrix matching q size
                 m0, m1 = M_pin.shape
@@ -188,13 +212,16 @@ def main():
                 KE = 0.5 * qdot_arr @ M_sub @ qdot_arr
             except Exception:
                 try:
-                    M = np.array(p.calculateMassMatrix(body, q, physicsClientId=client))
-                except Exception:
+                    q_call = [float(x) for x in q]
+                    M = np.array(p.calculateMassMatrix(body, q_call, physicsClientId=client))
+                except Exception as e:
+                    print(f"Warning: calculateMassMatrix failed for q={q} (types={[type(x) for x in q]}): {e}")
                     M = np.eye(num_joints)
                 KE = compute_ke(qdot_arr, M)
         else:
             try:
-                M = np.array(p.calculateMassMatrix(body, q, physicsClientId=client))
+                q_call = [float(x) for x in q]
+                M = np.array(p.calculateMassMatrix(body, q_call, physicsClientId=client))
             except Exception:
                 M = np.eye(num_joints)
             KE = compute_ke(qdot_arr, M)
@@ -217,6 +244,7 @@ def main():
             ee_pos = (0.0, 0.0, 0.0)
 
         q_history.append(np.array(q))
+        qdot_history.append(np.array(qdot))
         time_history.append(t)
         energy_history.append(E)
         delta_energy_history.append(E - E_ref)
@@ -251,21 +279,38 @@ def main():
                     c = min(m1, n_q)
                     M_sub[:r, :c] = M_full[:r, :c]
                 p_vec = M_sub.dot(qdot_arr)
-        except Exception:
+        except Exception as e:
+            # keep a visible debug message rather than silently swallowing errors
+            try:
+                M_shape = np.array(M).shape
+            except Exception:
+                M_shape = None
+            print(f"Warning: failed to compute momentum: {e}; M.shape={M_shape}, qdot_len={len(qdot)}")
             p_vec = np.zeros((len(qdot),), dtype=float)
         momentum_history.append(np.asarray(p_vec))
 
         t += timestep
 
-    # save CSVs into parameterized folder: src/vi/csv/q<q>_dt<dt>_T<T>_a.../pybullet/
+    # save CSVs into parameterized folder: src/vi_2p/csv/q<q>_dt<dt>_T<T>_a.../pybullet/
     def _format_param(v):
-        try:
-            fv = float(v)
-            if fv.is_integer():
-                return str(int(fv))
-            return str(v).replace('.', 'p').replace(' ', '')
-        except Exception:
-            return str(v).replace('.', 'p').replace(' ', '')
+        def _fmt_single(x):
+            try:
+                fx = float(x)
+                s = f"{fx:.2f}"
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+                    if '.' in s:
+                        s = s.replace('.', 'p')
+                return s.replace(' ', '')
+            except Exception:
+                s = str(x)
+                s = s.replace('.', 'p').replace(' ', '')
+                return s
+
+        if isinstance(v, (list, tuple)):
+            parts = [_fmt_single(x) for x in v]
+            return "_".join(parts)
+        return _fmt_single(v)
 
     # include lyapunov params (if present in config)
     lyap_a = None
@@ -281,10 +326,15 @@ def main():
         params_str = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}_a{_format_param(lyap_a)}_b{_format_param(lyap_b)}"
     else:
         params_str = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}"
-    csv_dir = os.path.expanduser(f'~/ros2_ws/dynamic_ws/src/vi/csv/{params_str}/pybullet/')
+    csv_dir = os.path.expanduser(f'~/ros2_ws/dynamic_ws/src/vi_2p/csv/{params_str}/pybullet/')
     os.makedirs(csv_dir, exist_ok=True)
 
     np.savetxt(os.path.join(csv_dir, 'q_history.csv'), np.array(q_history), delimiter=',')
+    # save qdot history for debugging momentum issues
+    try:
+        np.savetxt(os.path.join(csv_dir, 'qdot_history.csv'), np.array(qdot_history), delimiter=',')
+    except Exception:
+        pass
     np.savetxt(os.path.join(csv_dir, 'time_history.csv'), np.array(time_history), delimiter=',')
     np.savetxt(os.path.join(csv_dir, 'energy_history.csv'), np.array(energy_history), delimiter=',')
     np.savetxt(os.path.join(csv_dir, 'delta_energy_history.csv'), np.array(delta_energy_history), delimiter=',')

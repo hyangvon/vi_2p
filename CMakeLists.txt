@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16...3.26)
 # cmake_policy(SET CMP0167 NEW)
-project(vi)
+project(vi_2p)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -21,7 +21,7 @@ ament_auto_add_executable(rk4_node src/rk4_node.cpp)
 
 install(PROGRAMS
         scripts/pybullet_sim.py
-        scripts/plot_7dof_pendulum.py
+        scripts/plot_pendulum.py
         scripts/vi_compare_sim.py
         scripts/rk4_vi_compare_sim.py
         scripts/etsvi_sweep_heatmap.py

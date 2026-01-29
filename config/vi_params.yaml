@@ -1,9 +1,12 @@
 /**:  # 通配符，表示所有节点都能看到下面的参数
   ros__parameters:
-    q_init: 0.2
+    # q_init can be a scalar (applied to all joints) or a list per-joint.
+    # For a 2-DOF pendulum with joint1=90deg and joint2=0deg, set in radians:
+    # q_init: [1.57079632679, 0.0]
+    q_init: [1.57079632679, 0.0]
     timestep: 0.01
     duration: 40.0
-    urdf_path: "~/ros2_ws/dynamic_ws/src/vi/urdf/7_pendulum.urdf"
+    urdf_path: "~/ros2_ws/dynamic_ws/src/vi_2p/urdf/2_pendulum.urdf"
     eps_diff: 1.0e-6
 
 atsvi_ad_node:

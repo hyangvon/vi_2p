@@ -326,7 +326,7 @@ std::string fmt_double_label(double v)
 {
     std::ostringstream oss;
     oss.setf(std::ios::fmtflags(0), std::ios::floatfield);
-    oss<<std::fixed<<std::setprecision(6)<<v;
+    oss<<std::fixed<<std::setprecision(2)<<v;
     std::string s = oss.str();
     if (s.find('.') != std::string::npos) {
         while (!s.empty() && s.back() == '0') s.pop_back();
@@ -347,7 +347,10 @@ int main(int argc, char** argv)
     );
 
     // Parameters (provide defaults via launch)
-    double q_init = node->get_parameter("q_init").as_double();
+    std::vector<double> q_init_vec;
+    double q_init_scalar = 0.2;
+    bool q_init_is_vec = node->get_parameter("q_init", q_init_vec);
+    if (!q_init_is_vec) node->get_parameter("q_init", q_init_scalar);
     double timestep = node->get_parameter("timestep").as_double();
     double duration = node->get_parameter("duration").as_double();
     double eps_diff = node->get_parameter("eps_diff").as_double();
@@ -388,7 +391,16 @@ int main(int argc, char** argv)
     int n_steps = static_cast<int>(duration / timestep);
 
     // initial conditions
-    Vec q_prev = Vec::Constant(n, q_init);
+    Vec q_prev;
+    if (q_init_is_vec) {
+        q_prev = Vec::Zero(n);
+        for (int i = 0; i < n; ++i) {
+            if (i < static_cast<int>(q_init_vec.size())) q_prev(i) = q_init_vec[i];
+            else q_prev(i) = q_init_vec.back();
+        }
+    } else {
+        q_prev = Vec::Constant(n, q_init_scalar);
+    }
     Vec v_prev = Vec::Zero(n);
     Vec tau_k = Vec::Zero(n); // currently zero torques; modify as needed
 
@@ -494,13 +506,20 @@ int main(int argc, char** argv)
     double avg_time = !runtimes.empty() ? std::accumulate(runtimes.begin(), runtimes.end(), 0.0) / runtimes.size() : 0.0;
     RCLCPP_INFO(node->get_logger(), "Simulation finished, wall time: %f s, Average step time: %f ms", total_elapsed, avg_time*1e3);
 
-    // Save CSVs into parameterized folder including lyapunov params: src/vi/csv/q<q>_dt<dt>_T<T>_a<alpha>_b<beta>/etsvi/
-    std::string params_label = std::string("q") + fmt_double_label(q_init)
+    // Save CSVs into parameterized folder including lyapunov params: src/vi_2p/csv/q<q>_dt<dt>_T<T>_a<alpha>_b<beta>/etsvi/
+    std::string q_label;
+    if (q_init_is_vec) {
+        std::ostringstream qqs; for (size_t i = 0; i < q_init_vec.size(); ++i) { if (i) qqs << "_"; qqs << fmt_double_label(q_init_vec[i]); }
+        q_label = qqs.str();
+    } else {
+        q_label = fmt_double_label(q_init_scalar);
+    }
+    std::string params_label = std::string("q") + q_label
         + std::string("_dt") + fmt_double_label(timestep)
         + std::string("_T") + fmt_double_label(duration)
         + std::string("_a") + fmt_double_label(alpha)
         + std::string("_b") + fmt_double_label(beta);
-    std::string csv_dir = std::string("src/vi/csv/") + params_label + std::string("/etsvi/");
+    std::string csv_dir = std::string("src/vi_2p/csv/") + params_label + std::string("/etsvi/");
     std::string cmd = "mkdir -p " + csv_dir; int unused = system(cmd.c_str()); (void)unused;
 
     write_csv(csv_dir + "q_history.csv", q_history);

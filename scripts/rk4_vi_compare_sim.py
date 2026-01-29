@@ -40,11 +40,11 @@ def _init_fig(figsize=None):
 
 def _save_fig(tag, filename, dpi, show=True):
     params_label = build_params_label()
-    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi/fig/{params_label}/{tag}")
+    save_dir = os.path.expanduser(f"~/ros2_ws/dynamic_ws/src/vi_2p/fig/{params_label}/{tag}")
     os.makedirs(save_dir, exist_ok=True)
 
     # 读取配置并将关键参数加入文件名
-    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
     q_init = 'NA'
     timestep = 'NA'
     duration = 'NA'
@@ -79,13 +79,25 @@ def _save_fig(tag, filename, dpi, show=True):
         pass
 
     def _format_param(v):
-        try:
-            fv = float(v)
-            if fv.is_integer():
-                return str(int(fv))
-            return str(v).replace('.', 'p').replace(' ', '')
-        except Exception:
-            return str(v).replace('.', 'p').replace(' ', '')
+        def _fmt_single(x):
+            try:
+                fx = float(x)
+                s = f"{fx:.2f}"
+                # trim trailing zeros and optional dot, then replace '.' with 'p'
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+                    if '.' in s:
+                        s = s.replace('.', 'p')
+                return s.replace(' ', '')
+            except Exception:
+                s = str(x)
+                s = s.replace('.', 'p').replace(' ', '')
+                return s
+
+        if isinstance(v, (list, tuple)):
+            parts = [_fmt_single(x) for x in v]
+            return "_".join(parts)
+        return _fmt_single(v)
 
     params_str = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}_a{_format_param(lyap_alpha)}_b{_format_param(lyap_beta)}"
     name, ext = os.path.splitext(filename)
@@ -101,7 +113,7 @@ def _save_fig(tag, filename, dpi, show=True):
 
 
 def build_params_label(include_lyap=True):
-    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_path = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
     q_init = 'NA'
     timestep = 'NA'
     duration = 'NA'
@@ -136,13 +148,24 @@ def build_params_label(include_lyap=True):
         pass
 
     def _format_param(v):
-        try:
-            fv = float(v)
-            if fv.is_integer():
-                return str(int(fv))
-            return str(v).replace('.', 'p').replace(' ', '')
-        except Exception:
-            return str(v).replace('.', 'p').replace(' ', '')
+        def _fmt_single(x):
+            try:
+                fx = float(x)
+                s = f"{fx:.2f}"
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+                    if '.' in s:
+                        s = s.replace('.', 'p')
+                return s.replace(' ', '')
+            except Exception:
+                s = str(x)
+                s = s.replace('.', 'p').replace(' ', '')
+                return s
+
+        if isinstance(v, (list, tuple)):
+            parts = [_fmt_single(x) for x in v]
+            return "_".join(parts)
+        return _fmt_single(v)
 
     label = f"q{_format_param(q_init)}_dt{_format_param(timestep)}_T{_format_param(duration)}"
     if include_lyap:
@@ -154,13 +177,13 @@ def build_params_label(include_lyap=True):
 
 def run_ctsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting ctsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'ctsvi_ad_node',
+            'ros2', 'run', 'vi_2p', 'ctsvi_ad_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -174,13 +197,13 @@ def run_ctsvi():
 
 def run_atsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting atsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'atsvi_ad_node',
+            'ros2', 'run', 'vi_2p', 'atsvi_ad_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -194,13 +217,13 @@ def run_atsvi():
 
 def run_etsvi():
     """运行 C++ 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting etsvi simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'etsvi_node',
+            'ros2', 'run', 'vi_2p', 'etsvi_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -214,13 +237,13 @@ def run_etsvi():
 
 def run_rk4():
     """运行 RK4 仿真节点"""
-    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/config/vi_params.yaml')
+    config_file = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/config/vi_params.yaml')
 
     print("Starting rk4 simulation...")
 
     try:
         result = subprocess.run([
-            'ros2', 'run', 'vi', 'rk4_node',
+            'ros2', 'run', 'vi_2p', 'rk4_node',
             '--ros-args', '--params-file', config_file
         ], check=True)
 
@@ -253,13 +276,15 @@ def run_pybullet_inline():
             print('pybullet_sim.py does not define main()')
             return False
     except Exception as e:
+        import traceback
         print(f'Error running pybullet inline: {e}')
+        print(traceback.format_exc())
         return False
 
 def plot_runtime_comparison(tag, dpi_set):
     """绘制ETSVI和RK4的平均运行时间对比图"""
     print("Generating runtime comparison plot...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params = build_params_label()
 
     # 定义算法和对应的文件路径（位于参数化目录下）
@@ -319,7 +344,7 @@ def plot_results(tag, dpi_set):
     print("Generating plots...")
 
     # ---------- 1. 读取数据 ----------
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params_base = build_params_label()
 
     csv_dir_etsvi = os.path.join(base, params_base, 'etsvi')
@@ -358,10 +383,14 @@ def plot_results(tag, dpi_set):
     # ---------- 绘制能量曲线 ----------
     _init_fig()
     # 使用调色板和更明显的样式以增强可区分度
-    cmap = plt.get_cmap('tab10')
-    c_rk4 = cmap(0)
-    c_py = cmap(1)
-    c_etsvi = cmap(2)
+    # cmap = plt.get_cmap('tab10')
+    # c_rk4 = cmap(0)
+    # c_py = cmap(1)
+    # c_etsvi = cmap(2)
+    
+    c_rk4 = '#1f77b4'
+    c_py = '#ff7f0e'
+    c_etsvi = '#d62728'
 
     # 计算采样间隔以减少标记密度
     def _markevery(arr, target=50):
@@ -373,23 +402,23 @@ def plot_results(tag, dpi_set):
 
     # RK4
     plt.plot(time_rk4, delta_energy_rk4, label='ΔEnergy of RK4', color=c_rk4,
-             linestyle='-.', linewidth=2.0)
+             linestyle='--', linewidth=1.5)
 
     # PyBullet (if available)
     if 'delta_energy_py' in locals() and delta_energy_py is not None and time_py is not None:
         plt.plot(time_py, delta_energy_py, label='ΔEnergy of PyBullet', color=c_py,
-                 linestyle='-', linewidth=2.0)
+                 linestyle='-.', linewidth=1.5)
     
     # ETSVI
     plt.plot(time_etsvi, delta_energy_etsvi, label='ΔEnergy of C-ATSVI', color=c_etsvi,
-             linestyle='--', linewidth=2.0)
+             linestyle='-', linewidth=2.0)
              
     plt.xlabel('Time [s]')
     plt.ylabel('Energy [J]')
     plt.title('Energy evolution')
     plt.legend(loc='upper left')
     plt.grid(True)
-    # plt.ylim(-0.05, 0.05)
+    plt.ylim(-25, 60)
     filename = f"energy_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
 
@@ -400,41 +429,48 @@ def plot_results(tag, dpi_set):
     # RK4
     # plt.plot(time_rk4, tcp_rk4[:, 0], label='px_rk4', color=c_rk4, linestyle=':', linewidth=1.5,
     #          marker='s', markersize=3, markevery=_markevery(time_rk4))
-    plt.plot(time_rk4, tcp_rk4[:, 2], label='position Z of RK4', color=c_rk4, linestyle='-.', linewidth=2.0,
-             alpha=0.9, marker=None)
+    plt.plot(time_rk4, tcp_rk4[:, 2], label='position Z of RK4', color=c_rk4, linestyle='--', linewidth=1.5,
+             marker=None)
 
     # PyBullet
     if 'tcp_py' in locals() and tcp_py is not None:
         # tcp_py may be (N,3)
         # plt.plot(time_py, tcp_py[:, 0], label='px_pybullet', color=c_py, linestyle='-.', linewidth=1.5,
         #          marker='o', markersize=3, markevery=_markevery(time_py), alpha=0.9)
-        plt.plot(time_py, tcp_py[:, 2], label='position Z of PyBullet', color=c_py, linestyle='-', linewidth=2.0,
-                 alpha=0.9, marker=None)
+        plt.plot(time_py, tcp_py[:, 2], label='position Z of PyBullet', color=c_py, linestyle='-.', linewidth=1.5,
+                 marker=None)
 
     # ETSVI (TCP position)
     # plt.plot(time_etsvi, tcp_etsvi[:, 0], label='px_etsvi', color=c_etsvi, linestyle='--', linewidth=1.5,
     #          marker='^', markersize=3, markevery=_markevery(time_etsvi))
-    plt.plot(time_etsvi, tcp_etsvi[:, 2], label='position Z of C-ATSVI', color=c_etsvi, linestyle='--', linewidth=2.0,
-             alpha=0.9, marker=None)
+    plt.plot(time_etsvi, tcp_etsvi[:, 2], label='position Z of C-ATSVI', color=c_etsvi, linestyle='-', linewidth=1.5,
+             marker=None)
 
     plt.xlabel('Time [s]')
     plt.ylabel('Position [m]')
     plt.title('Tip Position')
     plt.legend(loc='upper left')
     plt.grid(True)
-    plt.ylim(-8, -3)
+    plt.ylim(-2.5, 1)
     filename = f"tcp_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
 
     plot_runtime_comparison(tag, dpi_set)
     # 绘制 ETSVI / RK4 / PyBullet 的第7关节动量对比图
     try:
-        plot_momentum_compare_joint7(tag, dpi_set, joint_idx=7)
+        plot_momentum_compare_joint(tag, dpi_set, joint_idx=2)
     except Exception as e:
         print(f"Warning: failed to plot momentum comparison: {e}")
     
     # 绘制第7关节相平面（关节编号从1开始，脚本内部使用0-based）
     # plot_phase_plane("etsvi_rk4_compare", 300, joint_index=6)
+    # 绘制 RK4 与 PyBullet 的第2关节相图（分别保存）
+    try:
+        # plot_rk4_pybullet_joint_phase_separate(tag, dpi_set, joint_idx=2)
+        plot_rk4_phase(tag, dpi_set, joint_idx=2)
+        plot_pybullet_phase(tag, dpi_set, joint_idx=2)
+    except Exception as e:
+        print(f"Warning: failed to plot separate RK4/PyBullet phase plots: {e}")
 
     # 绘制第7关节庞加莱截面：用关节1过零上升事件触发采样
     # plot_poincare_section("etsvi_rk4_compare", 300, joint_index=6, trigger_joint_index=0, surface='q=0', direction='+')
@@ -442,28 +478,28 @@ def plot_results(tag, dpi_set):
     return 1
 
 
-def plot_momentum_compare_joint7(tag, dpi_set, joint_idx=7):
+def plot_momentum_compare_joint(tag, dpi_set, joint_idx=2):
     """
     在 RK4 比较脚本中绘制 ETSVI / RK4 / PyBullet 的关节动量对比（默认关节7）。
     搜索参数化 CSV 目录下的 momentum_history.csv 与 time_history.csv。
     """
     print(f"Generating joint {joint_idx} momentum comparison (ETSVI/RK4/PyBullet)...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     params = build_params_label()
     paths = {
-        'ETSVI': os.path.join(base, params, 'etsvi', 'momentum_history.csv'),
+        'C-ATSVI': os.path.join(base, params, 'etsvi', 'momentum_history.csv'),
         'RK4': os.path.join(base, params, 'rk4', 'momentum_history.csv'),
         'PyBullet': os.path.join(base, params, 'pybullet', 'momentum_history.csv')
     }
     times = {
-        'ETSVI': os.path.join(base, params, 'etsvi', 'time_history.csv'),
+        'C-ATSVI': os.path.join(base, params, 'etsvi', 'time_history.csv'),
         'RK4': os.path.join(base, params, 'rk4', 'time_history.csv'),
         'PyBullet': os.path.join(base, params, 'pybullet', 'time_history.csv')
     }
 
     _init_fig(figsize=(7,4))
     cmap = plt.get_cmap('tab10')
-    colmap = {'ETSVI': cmap(2), 'RK4': cmap(0), 'PyBullet': cmap(1)}
+    colmap = {'C-ATSVI': cmap(2), 'RK4': cmap(0), 'PyBullet': cmap(1)}
     any_plotted = False
     for name, p in paths.items():
         if not os.path.exists(p):
@@ -526,7 +562,7 @@ def plot_momentum_compare_joint7(tag, dpi_set, joint_idx=7):
 def plot_phase_plane(tag, dpi_set, joint_index=6):
     """绘制指定关节（0-based 索引）的相平面图（q vs qdot），对比 rk4/pybullet/etsvi。"""
     print(f"Generating phase plane for joint {joint_index+1}...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
 
     params = build_params_label()
     csv_dir_etsvi = os.path.join(base, params, 'etsvi')
@@ -629,7 +665,14 @@ def plot_phase_plane(tag, dpi_set, joint_index=6):
 
     plt.xlabel(f'Joint {joint_index+1} Position [rad]')
     plt.ylabel(f'Joint {joint_index+1} Velocity [rad/s]')
+    # make labels consistent with ETSVI plotting (q / qdot) and enforce 1:1 aspect
+    plt.xlabel(f'Joint {joint_index+1} q [rad]')
+    plt.ylabel(f'Joint {joint_index+1} qdot [rad/s]')
     plt.title(f'Phase Plane - Joint {joint_index+1}')
+    try:
+        plt.gca().set_aspect('equal', adjustable='box')
+    except Exception:
+        pass
     plt.grid(True)
     plt.legend()
     filename = f'phase_plane_joint{joint_index+1}_{tag}.png'
@@ -637,6 +680,222 @@ def plot_phase_plane(tag, dpi_set, joint_index=6):
 
     return True
 
+
+def plot_rk4_pybullet_joint_phase_separate(tag, dpi_set, joint_idx=2):
+    """分别为 RK4 与 PyBullet 绘制指定关节（1-based 编号）的相图（q vs qdot），并保存各自图像。"""
+    print(f"Generating separate phase plots for joint {joint_idx} (RK4 & PyBullet)...")
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
+    params = build_params_label()
+
+    csv_rk4 = os.path.join(base, params, 'rk4')
+    csv_py = os.path.join(base, params, 'pybullet')
+
+    target_idx = joint_idx - 1
+
+    # --- RK4 ---
+    q_rk4 = None
+    v_rk4 = None
+    t_rk4 = None
+    try:
+        q_rk4 = np.loadtxt(os.path.join(csv_rk4, 'q_history.csv'), delimiter=',')
+        if q_rk4.ndim == 1:
+            q_rk4 = q_rk4[:, None]
+    except Exception:
+        q_rk4 = None
+    try:
+        v_rk4 = np.loadtxt(os.path.join(csv_rk4, 'v_history.csv'), delimiter=',')
+        if v_rk4.ndim == 1:
+            v_rk4 = v_rk4[:, None]
+    except Exception:
+        v_rk4 = None
+    try:
+        t_rk4 = np.loadtxt(os.path.join(csv_rk4, 'time_history.csv'), delimiter=',')
+    except Exception:
+        t_rk4 = None
+
+    # 绘制 RK4 相图
+    if q_rk4 is not None:
+        if target_idx < 0 or target_idx >= q_rk4.shape[1]:
+            print(f"RK4: joint {joint_idx} out of range")
+        else:
+            qcol = q_rk4[:, target_idx]
+            if v_rk4 is not None and v_rk4.shape[1] > target_idx:
+                vcol = v_rk4[:, target_idx]
+            elif t_rk4 is not None:
+                vcol = np.gradient(qcol, t_rk4)
+            else:
+                vcol = np.gradient(qcol)
+            _init_fig(figsize=(7,6))
+            plt.plot(qcol, vcol, label='RK4', linewidth=1, color='tab:blue')
+            # match ETSVI labels and enforce 1:1
+            plt.xlabel(f'Joint {joint_idx} q [rad]')
+            plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
+            plt.title(f'RK4 Phase Portrait')
+            try:
+                plt.gca().set_aspect('equal', adjustable='box')
+            except Exception:
+                pass
+            plt.grid(True)
+            plt.legend()
+            filename = f'phase_rk4_joint{joint_idx}_{tag}.png'
+            _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+    else:
+        print('RK4 q_history.csv not found or unreadable; skipping RK4 phase plot')
+
+    # --- PyBullet ---
+    q_py = None
+    t_py = None
+    try:
+        q_py = np.loadtxt(os.path.join(csv_py, 'q_history.csv'), delimiter=',')
+        if q_py.ndim == 1:
+            q_py = q_py[:, None]
+    except Exception:
+        q_py = None
+    try:
+        t_py = np.loadtxt(os.path.join(csv_py, 'time_history.csv'), delimiter=',')
+    except Exception:
+        t_py = None
+
+    if q_py is not None:
+        if target_idx < 0 or target_idx >= q_py.shape[1]:
+            print(f"PyBullet: joint {joint_idx} out of range")
+        else:
+            qcol = q_py[:, target_idx]
+            if t_py is not None:
+                vcol = np.gradient(qcol, t_py)
+            else:
+                vcol = np.gradient(qcol)
+            _init_fig(figsize=(7,6))
+            plt.plot(qcol, vcol, label='PyBullet', linewidth=1, color='tab:orange')
+            # match ETSVI labels and enforce 1:1
+            plt.xlabel(f'Joint {joint_idx} q [rad]')
+            plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
+            plt.title(f'PyBullet Phase Portrait')
+            try:
+                plt.gca().set_aspect('equal', adjustable='box')
+            except Exception:
+                pass
+            plt.grid(True)
+            plt.legend()
+            filename = f'phase_pybullet_joint{joint_idx}_{tag}.png'
+            _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+    else:
+        print('PyBullet q_history.csv not found or unreadable; skipping PyBullet phase plot')
+
+    return True
+
+
+def plot_rk4_phase(tag, dpi_set, joint_idx=2):
+    print(f"Generating RK4 phase portrait for joint {joint_idx}...")
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
+    params_base = build_params_label(include_lyap=True)
+    csv_dir = os.path.join(base, params_base, 'rk4')
+    q_path = os.path.join(csv_dir, 'q_history.csv')
+    time_path = os.path.join(csv_dir, 'time_history.csv')
+
+    if not os.path.exists(q_path):
+        print(f"No RK4 q_history found at {q_path}; skipping phase plot.")
+        return None
+
+    try:
+        q_hist = np.loadtxt(q_path, delimiter=',')
+        q_hist = np.atleast_2d(q_hist).astype(float)
+    except Exception as e:
+        print(f"Failed to read {q_path}: {e}")
+        return None
+
+    try:
+        t = np.loadtxt(time_path, delimiter=',')
+        t = np.atleast_1d(t).astype(float)
+    except Exception:
+        t = np.arange(q_hist.shape[0])
+
+    idx0 = joint_idx - 1
+    if idx0 < 0 or idx0 >= q_hist.shape[1]:
+        print(f"Requested joint index {joint_idx} out of range (available columns={q_hist.shape[1]})")
+        return None
+
+    # 使用 np.gradient 保留与 q_hist 相同长度
+    try:
+        qdot = np.gradient(q_hist[:, idx0], t)
+    except Exception:
+        # fallback numerical diff
+        dt = t[1] - t[0] if t.size > 1 else 1.0
+        qdot = np.zeros(q_hist.shape[0])
+        qdot[1:] = np.diff(q_hist[:, idx0]) / dt
+
+    _init_fig(figsize=(6, 6))
+    plt.plot(q_hist[:, idx0], qdot, color='#1F77B4', linewidth=1.5)
+    plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
+    plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
+    plt.xlabel(f'Joint {joint_idx} q [rad]')
+    plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
+    plt.title(f'RK4 Phase Portrait')
+    plt.grid(True, alpha=0.3)
+    plt.xlim(-3, 3)
+    plt.ylim(-15, 15)
+    handles, leg_labels = plt.gca().get_legend_handles_labels()
+    if leg_labels:
+        plt.legend()
+    filename = f"phase_rk4_joint{joint_idx}_{tag}.png"
+    _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+    return True
+
+def plot_pybullet_phase(tag, dpi_set, joint_idx=2):
+    print(f"Generating PyBullet phase portrait for joint {joint_idx}...")
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
+    params_base = build_params_label(include_lyap=True)
+    csv_dir = os.path.join(base, params_base, 'pybullet')
+    q_path = os.path.join(csv_dir, 'q_history.csv')
+    time_path = os.path.join(csv_dir, 'time_history.csv')
+
+    if not os.path.exists(q_path):
+        print(f"No PyBullet q_history found at {q_path}; skipping phase plot.")
+        return None
+
+    try:
+        q_hist = np.loadtxt(q_path, delimiter=',')
+        q_hist = np.atleast_2d(q_hist).astype(float)
+    except Exception as e:
+        print(f"Failed to read {q_path}: {e}")
+        return None
+
+    try:
+        t = np.loadtxt(time_path, delimiter=',')
+        t = np.atleast_1d(t).astype(float)
+    except Exception:
+        t = np.arange(q_hist.shape[0])
+
+    idx0 = joint_idx - 1
+    if idx0 < 0 or idx0 >= q_hist.shape[1]:
+        print(f"Requested joint index {joint_idx} out of range (available columns={q_hist.shape[1]})")
+        return None
+
+    # 使用 np.gradient 保留与 q_hist 相同长度
+    try:
+        qdot = np.gradient(q_hist[:, idx0], t)
+    except Exception:
+        # fallback numerical diff
+        dt = t[1] - t[0] if t.size > 1 else 1.0
+        qdot = np.zeros(q_hist.shape[0])
+        qdot[1:] = np.diff(q_hist[:, idx0]) / dt
+
+    _init_fig(figsize=(6, 6))
+    plt.plot(q_hist[:, idx0], qdot, color='#FF7F0E', linewidth=1.5)
+    plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
+    plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
+    plt.xlabel(f'Joint {joint_idx} q [rad]')
+    plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
+    plt.title(f'PyBullet Phase Portrait')
+    plt.grid(True, alpha=0.3)
+    plt.xlim(-3, 3)
+    plt.ylim(-15, 15)
+    handles, leg_labels = plt.gca().get_legend_handles_labels()
+    if leg_labels:
+        plt.legend()
+    filename = f"phase_pybullet_joint{joint_idx}_{tag}.png"
+    _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+    return True
 
 def plot_poincare_section(tag, dpi_set, joint_index=6, trigger_joint_index=0, surface='q=0', direction='+'):
     """绘制关节的庞加莱截面：用 trigger 关节的 q 过零事件作为截面，提取 target 关节的 (q,v)。
@@ -646,7 +905,7 @@ def plot_poincare_section(tag, dpi_set, joint_index=6, trigger_joint_index=0, su
     对 ETSVI / PyBullet 无速度记录时用时间序列差分估计速度。
     """
     print(f"Generating Poincaré section for joint {joint_index+1}...")
-    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi/csv/')
+    base = os.path.expanduser('~/ros2_ws/dynamic_ws/src/vi_2p/csv/')
     csv_dir_etsvi = os.path.join(base, 'etsvi')
     csv_dir_rk4   = os.path.join(base, 'rk4')
     csv_dir_py    = os.path.join(base, 'pybullet')

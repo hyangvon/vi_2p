@@ -285,7 +285,7 @@ std::string fmt_double_label(double v)
 {
     std::ostringstream oss;
     oss.setf(std::ios::fmtflags(0), std::ios::floatfield);
-    oss<<std::fixed<<std::setprecision(6)<<v;
+    oss<<std::fixed<<std::setprecision(2)<<v;
     std::string s = oss.str();
     if (s.find('.') != std::string::npos) {
         while (!s.empty() && s.back() == '0') s.pop_back();
@@ -297,7 +297,7 @@ std::string fmt_double_label(double v)
 
 std::pair<double,double> read_lyap_from_config()
 {
-    std::string cfg = "src/vi/config/vi_params.yaml";
+    std::string cfg = "src/vi_2p/config/vi_params.yaml";
     std::ifstream ifs(cfg);
     double a = 0.0, b = 0.0;
     if (!ifs) return {a,b};
@@ -322,14 +322,30 @@ int main(int argc, char** argv)
     );
 
     // 获取参数值
-    double q_init = node->get_parameter("q_init").as_double();
+    std::vector<double> q_init_vec;
+    double q_init_scalar = 0.2;
+    bool q_init_is_vec = node->get_parameter("q_init", q_init_vec);
+    if (!q_init_is_vec) node->get_parameter("q_init", q_init_scalar);
     double timestep = node->get_parameter("timestep").as_double();
     double duration = node->get_parameter("duration").as_double();
     // std::string urdf_path = node->get_parameter("urdf_path").as_string();
     std::string urdf_path = expand_user(node->get_parameter("urdf_path").as_string());
 
     RCLCPP_INFO(node->get_logger(), "Using URDF: %s", urdf_path.c_str());
-    RCLCPP_INFO(node->get_logger(), "Initial = %.2f rad, Duration = %.1f s, Timestep = %.3f s", q_init, duration, timestep);
+    // print q_init (scalar or vector)
+    std::string q_init_print;
+    if (q_init_is_vec) {
+        std::ostringstream qqs; qqs << "[";
+        for (size_t i = 0; i < q_init_vec.size(); ++i) {
+            if (i) qqs << ", ";
+            qqs << std::setprecision(6) << q_init_vec[i];
+        }
+        qqs << "]";
+        q_init_print = qqs.str();
+        RCLCPP_INFO(node->get_logger(), "Initial = %s, Duration = %.1f s, Timestep = %.3f s", q_init_print.c_str(), duration, timestep);
+    } else {
+        RCLCPP_INFO(node->get_logger(), "Initial = %.6f rad, Duration = %.1f s, Timestep = %.3f s", q_init_scalar, duration, timestep);
+    }
 
     // build double model and data (for non-AD tasks like energy logging)
     Model model;
@@ -361,7 +377,16 @@ int main(int argc, char** argv)
     int n = model.nq;
     int n_steps = static_cast<int>(duration / timestep);
 
-    Vec q_prev = Vec::Constant(n, q_init);
+    Vec q_prev;
+    if (q_init_is_vec) {
+        q_prev = Vec::Zero(n);
+        for (int i = 0; i < n; ++i) {
+            if (i < static_cast<int>(q_init_vec.size())) q_prev(i) = q_init_vec[i];
+            else q_prev(i) = q_init_vec.back();
+        }
+    } else {
+        q_prev = Vec::Constant(n, q_init_scalar);
+    }
     Vec v_prev = Vec::Zero(n);
     Vec tau_k = Vec::Zero(n);
 
@@ -490,14 +515,21 @@ int main(int argc, char** argv)
         avg_time*1e3);
 
 
-    // Save into parameterized folder including lyap params: src/vi/csv/q<q>_dt<dt>_T<T>_a<alpha>_b<beta>/ctsvi_ad/
+    // Save into parameterized folder including lyap params: src/vi_2p/csv/q<q>_dt<dt>_T<T>_a<alpha>_b<beta>/ctsvi_ad/
     auto [a_val, b_val] = read_lyap_from_config();
-    std::string params_label = std::string("q") + fmt_double_label(q_init)
+    std::string q_label;
+    if (q_init_is_vec) {
+        std::ostringstream qqs; for (size_t i = 0; i < q_init_vec.size(); ++i) { if (i) qqs << "_"; qqs << fmt_double_label(q_init_vec[i]); }
+        q_label = qqs.str();
+    } else {
+        q_label = fmt_double_label(q_init_scalar);
+    }
+    std::string params_label = std::string("q") + q_label
         + std::string("_dt") + fmt_double_label(timestep)
         + std::string("_T") + fmt_double_label(duration)
         + std::string("_a") + fmt_double_label(a_val)
         + std::string("_b") + fmt_double_label(b_val);
-    std::string csv_dir = std::string("src/vi/csv/") + params_label + std::string("/ctsvi_ad/");
+    std::string csv_dir = std::string("src/vi_2p/csv/") + params_label + std::string("/ctsvi_ad/");
     std::string cmd = "mkdir -p " + csv_dir; int unused = system(cmd.c_str()); (void)unused;
 
     write_csv(csv_dir + "q_history.csv", q_history);
