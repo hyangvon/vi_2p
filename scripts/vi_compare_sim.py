@@ -104,7 +104,7 @@ def _save_fig(tag, filename, dpi, show=True):
     name, ext = os.path.splitext(filename)
     new_filename = f"{name}_{params_str}{ext}"
     save_path = os.path.join(save_dir, new_filename)
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.savefig(save_path, dpi=dpi)
     print(f"Saved: {save_path}")
     if show:
@@ -810,7 +810,9 @@ def plot_etsvi_phase(tag, dpi_set, joint_idx=2):
         qdot = np.zeros(q_hist.shape[0])
         qdot[1:] = np.diff(q_hist[:, idx0]) / dt
 
-    _init_fig(figsize=(6, 6))
+    _init_fig(figsize=(10, 5))
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
     plt.plot(q_hist[:, idx0], qdot, color='#D62728', linewidth=1.5)
     plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
     plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
@@ -818,11 +820,11 @@ def plot_etsvi_phase(tag, dpi_set, joint_idx=2):
     plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
     plt.title(f'C-ATSVI Phase Portrait')
     plt.grid(True, alpha=0.3)
-    plt.xlim(-3, 3)
+    plt.xlim(-8, 8)
     plt.ylim(-15, 15)
     handles, leg_labels = plt.gca().get_legend_handles_labels()
     if leg_labels:
-        plt.legend()
+        plt.legend(loc='upper left')
     filename = f"phase_etsvi_joint{joint_idx}_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
     return True
@@ -901,6 +903,7 @@ def plot_results(tag, dpi_set):
     csv_dir_ctsvi_ad = os.path.join(base, params_base, 'ctsvi_ad')
     csv_dir_atsvi_ad = os.path.join(base, params_base, 'atsvi_ad')
     csv_dir_etsvi    = os.path.join(base, params_base, 'etsvi')
+    beta0_dir = os.path.join(base, 'q1p57_0_dt0p01_T40_a0p4_b0', 'etsvi')
 
     print(f"{csv_dir_ctsvi_ad}")
 
@@ -919,9 +922,11 @@ def plot_results(tag, dpi_set):
         delta_energy_ctsvi = np.loadtxt(os.path.join(csv_dir_ctsvi_ad, 'delta_energy_history.csv'), delimiter=',')
         delta_energy_atsvi = np.loadtxt(os.path.join(csv_dir_atsvi_ad, 'delta_energy_history.csv'), delimiter=',')
         delta_energy_etsvi = np.loadtxt(os.path.join(csv_dir_etsvi, 'delta_energy_history.csv'), delimiter=',')
+        delta_energy_etsvi_b0 = np.loadtxt(os.path.join(beta0_dir, 'delta_energy_history.csv'), delimiter=',')
         time_ctsvi = np.loadtxt(os.path.join(csv_dir_ctsvi_ad, 'time_history.csv'), delimiter=',')
         time_atsvi = np.loadtxt(os.path.join(csv_dir_atsvi_ad, 'time_history.csv'), delimiter=',')
         time_etsvi = np.loadtxt(os.path.join(csv_dir_etsvi, 'time_history.csv'), delimiter=',')
+        time_etsvi_b0 = np.loadtxt(os.path.join(beta0_dir, 'time_history.csv'), delimiter=',')
         # momentum = np.loadtxt(os.path.join(csv_dir, 'momentum_history.csv'), delimiter=',')
         step_atsvi = np.loadtxt(os.path.join(csv_dir_atsvi_ad, 'h_history.csv'), delimiter=',')
         step_etsvi = np.loadtxt(os.path.join(csv_dir_etsvi, 'h_history.csv'), delimiter=',')
@@ -984,6 +989,28 @@ def plot_results(tag, dpi_set):
     plt.ylim(-0.015, 0.015)
     filename = f"energy_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+
+# ---------- 绘制能量曲线（imp对比） ----------
+    _init_fig()
+
+    # ETSVI
+    plt.plot(time_etsvi, delta_energy_etsvi, label='ΔEnergy of C-ATSVI', color='#D62728', linestyle='-', linewidth=2)
+
+    # ETSVI no IMP
+    plt.plot(time_etsvi_b0, delta_energy_etsvi_b0, label='ΔEnergy of C-ATSVI (no IMP)', color='#000000', linestyle='-.', linewidth=1.5)
+
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Energy [J]')
+    plt.title('Energy evolution (IMP vs no IMP)')
+    plt.legend(loc='upper left')
+    plt.grid(True)
+    plt.xlim(0, 40)
+    # plt.ylim(-0.001, 0.001)
+    filename = f"energy_no_imp_{tag}.png"
+    _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
+
     #
     # # ---------- 4. 相平面图（q vs qdot） ----------
     # dt = time[1] - time[0]

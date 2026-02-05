@@ -103,7 +103,7 @@ def _save_fig(tag, filename, dpi, show=True):
     name, ext = os.path.splitext(filename)
     new_filename = f"{name}_{params_str}{ext}"
     save_path = os.path.join(save_dir, new_filename)
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.savefig(save_path, dpi=dpi)
     print(f"Saved: {save_path}")
     if show:
@@ -413,11 +413,14 @@ def plot_results(tag, dpi_set):
     plt.plot(time_etsvi, delta_energy_etsvi, label='ΔEnergy of C-ATSVI', color=c_etsvi,
              linestyle='-', linewidth=2.0)
              
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
     plt.xlabel('Time [s]')
     plt.ylabel('Energy [J]')
     plt.title('Energy evolution')
     plt.legend(loc='upper left')
     plt.grid(True)
+    plt.xlim(0, 40)
     plt.ylim(-25, 60)
     filename = f"energy_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
@@ -446,11 +449,14 @@ def plot_results(tag, dpi_set):
     plt.plot(time_etsvi, tcp_etsvi[:, 2], label='position Z of C-ATSVI', color=c_etsvi, linestyle='-', linewidth=1.5,
              marker=None)
 
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
     plt.xlabel('Time [s]')
     plt.ylabel('Position [m]')
     plt.title('Tip Position')
     plt.legend(loc='upper left')
     plt.grid(True)
+    plt.xlim(0, 40)
     plt.ylim(-2.5, 1)
     filename = f"tcp_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
@@ -824,7 +830,9 @@ def plot_rk4_phase(tag, dpi_set, joint_idx=2):
         qdot = np.zeros(q_hist.shape[0])
         qdot[1:] = np.diff(q_hist[:, idx0]) / dt
 
-    _init_fig(figsize=(6, 6))
+    _init_fig(figsize=(10, 5))
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
     plt.plot(q_hist[:, idx0], qdot, color='#1F77B4', linewidth=1.5)
     plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
     plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
@@ -832,11 +840,11 @@ def plot_rk4_phase(tag, dpi_set, joint_idx=2):
     plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
     plt.title(f'RK4 Phase Portrait')
     plt.grid(True, alpha=0.3)
-    plt.xlim(-3, 3)
-    plt.ylim(-15, 15)
+    # plt.xlim(-6, 6)
+    # plt.ylim(-15, 15)
     handles, leg_labels = plt.gca().get_legend_handles_labels()
     if leg_labels:
-        plt.legend()
+        plt.legend(loc='upper left')
     filename = f"phase_rk4_joint{joint_idx}_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
     return True
@@ -880,7 +888,9 @@ def plot_pybullet_phase(tag, dpi_set, joint_idx=2):
         qdot = np.zeros(q_hist.shape[0])
         qdot[1:] = np.diff(q_hist[:, idx0]) / dt
 
-    _init_fig(figsize=(6, 6))
+    _init_fig(figsize=(10, 5))
+    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='y', useMathText=True)
+    plt.subplots_adjust(left=0.11, right=0.98, top=0.9, bottom=0.15)
     plt.plot(q_hist[:, idx0], qdot, color='#FF7F0E', linewidth=1.5)
     plt.scatter(q_hist[0, idx0], qdot[0], marker='o', color='green', label='start', s=100)
     plt.scatter(q_hist[-1, idx0], qdot[-1], marker='X', color='red', label='end', s=100)
@@ -888,11 +898,11 @@ def plot_pybullet_phase(tag, dpi_set, joint_idx=2):
     plt.ylabel(f'Joint {joint_idx} qdot [rad/s]')
     plt.title(f'PyBullet Phase Portrait')
     plt.grid(True, alpha=0.3)
-    plt.xlim(-3, 3)
+    plt.xlim(-8, 8)
     plt.ylim(-15, 15)
     handles, leg_labels = plt.gca().get_legend_handles_labels()
     if leg_labels:
-        plt.legend()
+        plt.legend(loc='upper left')
     filename = f"phase_pybullet_joint{joint_idx}_{tag}.png"
     _save_fig(tag, filename, dpi_set if dpi_set else DEFAULT_DPI, show=False)
     return True
