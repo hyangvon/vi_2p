@@ -22,6 +22,7 @@ ament_auto_add_executable(rk4_node src/rk4_node.cpp)
 install(PROGRAMS
         scripts/pybullet_sim.py
         scripts/plot_pendulum.py
+        scripts/render_pendulum.py
         scripts/vi_compare_sim.py
         scripts/rk4_vi_compare_sim.py
         scripts/etsvi_sweep_heatmap.py
